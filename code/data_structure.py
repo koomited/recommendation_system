@@ -86,6 +86,18 @@ class dataIndexing:
         # ax.set_ylabel("Frequencies")
         ax.set_title("Average Rating per Movie")
         plt.show()
+
+    def line_plot(self, data, xaxis, yaxis, title):
+
+        # _, _, losses = self.alternating_least_square_biases(lambd=0.5, gamma=0.5, iterations = 10)
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.plot(range(1,len(data)+1), data)
+        ax.set_xlabel(xaxis)
+        ax.set_ylabel(yaxis)
+        ax.set_title(title)
+
+        plt.show()
     
     def alternating_least_square_biases(self, lambd=0.5, gamma=0.5, iterations = 1000):
         # number of users
@@ -95,6 +107,8 @@ class dataIndexing:
         user_biases = np.zeros(M)
         item_biases = np.zeros(N)
 
+        losses = []
+        rmses = []
         for i in range(iterations):
             # users biases computation
             for m in range(M):
@@ -114,14 +128,31 @@ class dataIndexing:
                     user_counter += 1
                 bias = bias/(lambd*user_counter + gamma) 
                 item_biases[n] = bias
-            if not i%100:
-                print(f"Iteration{i}: User bias= {round(user_biases[-1])};  Item bias= {round(item_biases[-1])}")
 
-                
-        return user_biases, item_biases 
-        # return M, N
+            loss, rmse = self.loss_function(user_biases, item_biases, lambd = lambd, gamma = gamma)
+            if not i%10:
+                print(f"Iteration{i}: loss = {loss}; RMSE = {rmse}")
+            losses.append(loss)
+            rmses.append(rmse)
+        return user_biases, item_biases, losses, rmses
 
         
+    def  loss_function(self, user_biases, item_biases, lambd = 0.5, gamma = 0.5):
+        M = len(self.data_by_user_id)
+        loss= -gamma/2*np.sum(user_biases**2)
+        rmse_list=[]
+        for m in range(M):
+            user_loss=[]
+            for n, r in self.data_by_user_id[m]:
+                user_loss.append((r-user_biases[m]-item_biases[self.map_idx_to_movie.index(n)])**2)
+                rmse_list.append((r-user_biases[m]-item_biases[self.map_idx_to_movie.index(n)])**2)
+            loss+= -sum(user_loss)/2*lambd
+        rmse = np.mean(rmse_list)
+        return loss, rmse
+
+
+
+                
 
 
 
