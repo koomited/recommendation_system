@@ -4,6 +4,7 @@ import csv
 import seaborn as sns
 from scipy.stats import norm
 from collections import defaultdict
+import random
 
 
 class dataIndexing:
@@ -15,10 +16,12 @@ class dataIndexing:
         self.map_idx_to_user = []
         self.data_by_user_id = defaultdict(list)
 
+      
+
         self.map_movie_to_idx = {}
         self.map_idx_to_movie = []
         self.data_by_movie_id = defaultdict(list)
-        
+
         
        
         
@@ -217,18 +220,83 @@ class dataIndexing:
         
     def  loss_function(self, user_biases, item_biases, lambd = 0.5, gamma = 0.5):
         M = len(self.data_by_user_id)
-        loss= gamma/2*np.sum(user_biases**2) + gamma/2*np.sum(item_biases**2)
+        loss= gamma*np.sum(user_biases**2)/2 + gamma*np.sum(item_biases**2)/2
         rmse_list=[]
+        user_vector_loss = 0
+
         for m in range(M):
-            user_loss=[]
+            user_loss = []
+            u_m = self.users_latents[m,:]
+            user_vector_loss += np.dot(u_m, u_m)
+            item_vector_loss = 0
             for n, r in self.data_by_user_id[m]:
-                u_m = self.users_latents[m,:]
                 v_n = self.items_latents[:,self.map_idx_to_movie.index(n)]
+                item_vector_loss +=np.dot(v_n, v_n)
                 user_loss.append((r-user_biases[m] -np.dot(u_m, v_n) -item_biases[self.map_idx_to_movie.index(n)])**2)
                 rmse_list.append((r-user_biases[m] -np.dot(u_m, v_n)  -item_biases[self.map_idx_to_movie.index(n)])**2)
-            loss+= sum(user_loss)/2*lambd
+            loss+= lambd*sum(user_loss)/2 
+            # + gamma*item_vector_loss/2
+            # loss += gamma*user_vector_loss/2
         rmse = np.mean(rmse_list)
         return loss, rmse
+
+    def train_test_split(self):
+
+        self.map_user_to_idx = {}
+        self.map_idx_to_user = []
+        self.data_by_user_train = []
+        self.data_by_user_test = []
+
+        self.map_movie_to_idx = {}
+        self.map_idx_to_movie = []
+        self.data_by_movie_train = []
+        self.data_by_movie_test = []
+
+
+        with open(self.data_dir, "r") as file:
+            csv_reader = csv.DictReader(file)
+            for row in csv_reader:
+                user_id = int(row["userId"])
+                movie_id = int(row["movieId"])
+                rating = float(row["rating"])
+                # assign randomly to train or test 
+                flip_coin = random.random()
+                if flip_coin < 0.5:
+                    if user_id not in self.map_idx_to_user:
+                        self.map_idx_to_user.append(user_id)
+                        self.map_user_to_idx[user_id] = self.map_idx_to_user.index(user_id)
+                        self.data_by_user_train.append([(movie_id, rating)])
+                        self.data_by_user_test.append([()])
+                    else:
+                        self.data_by_user_train[self.map_idx_to_user.index(user_id)].append((movie_id, rating))
+                        self.data_by_user_test[self.map_idx_to_user.index(user_id)].append(())
+
+                    if movie_id not in self.map_idx_to_movie:
+                        self.map_idx_to_movie .append(movie_id)
+                        self.map_movie_to_idx[movie_id] = self.map_idx_to_movie.index(movie_id)
+                        self.data_by_movie_train.append([(user_id, rating)])
+                        self.data_by_movie_test.append([()])
+                    else:
+                        self.data_by_movie_train[self.map_idx_to_movie.index(movie_id)].append((user_id, rating))
+                        self.data_by_movie_test[self.map_idx_to_movie.index(movie_id)].append(())
+
+                if user_id not in self.map_idx_to_user:
+                    self.map_idx_to_user.append(user_id)
+                    self.map_user_to_idx[user_id] = self.map_idx_to_user.index(user_id)
+                    self.data_by_user_test.append([(movie_id, rating)])
+                    self.data_by_user_train.append([()])
+                else:
+                    self.data_by_user_test[self.map_idx_to_user.index(user_id)].append((movie_id, rating))
+                    self.data_by_user_train[self.map_idx_to_user.index(user_id)].append(())
+
+                if movie_id not in self.map_idx_to_movie:
+                    self.map_idx_to_movie .append(movie_id)
+                    self.map_movie_to_idx[movie_id] = self.map_idx_to_movie.index(movie_id)
+                    self.data_by_movie_test.append([(user_id, rating)])
+                    self.data_by_movie_train.append([()])
+                else:
+                    self.data_by_movie_test[self.map_idx_to_movie.index(movie_id)].append((user_id, rating))
+                    self.data_by_movie_train[self.map_idx_to_movie.index(movie_id)].append(())
 
 
 
