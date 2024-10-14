@@ -148,7 +148,7 @@ class dataIndexing:
 
         plt.show()
     
-    def alternating_least_square_biases(self, lambd=0.5, gamma=0.5, iterations = 1000):
+    def alternating_least_square_biases(self, data, lambd=0.5, gamma=0.5, iterations = 1000):
         # number of users
         M = len(self.data_by_user_id)
         # number of items
@@ -218,8 +218,8 @@ class dataIndexing:
         return user_biases, item_biases, losses, rmses
 
         
-    def  loss_function(self, user_biases, item_biases, lambd = 0.5, gamma = 0.5):
-        M = len(self.data_by_user_id)
+    def  loss_function(self, data, user_biases, item_biases, lambd = 0.5, gamma = 0.5):
+        M = len(data)
         loss= gamma*np.sum(user_biases**2)/2 + gamma*np.sum(item_biases**2)/2
         rmse_list=[]
         user_vector_loss = 0
@@ -234,9 +234,8 @@ class dataIndexing:
                 item_vector_loss +=np.dot(v_n, v_n)
                 user_loss.append((r-user_biases[m] -np.dot(u_m, v_n) -item_biases[self.map_idx_to_movie.index(n)])**2)
                 rmse_list.append((r-user_biases[m] -np.dot(u_m, v_n)  -item_biases[self.map_idx_to_movie.index(n)])**2)
-            loss+= lambd*sum(user_loss)/2 
-            # + gamma*item_vector_loss/2
-            # loss += gamma*user_vector_loss/2
+            loss+= lambd*sum(user_loss)/2 + gamma*item_vector_loss/2 
+        loss += gamma*user_vector_loss/2
         rmse = np.mean(rmse_list)
         return loss, rmse
 
