@@ -7,9 +7,9 @@ from collections import defaultdict
 
 
 class dataIndexing:
-    def __init__(self, data_dir) -> None:
+    def __init__(self, data_dir, factors_number:int) -> None:
         self.data_dir = data_dir
-
+        self.factors_number = factors_number
         # Mappings for user and movie indexes
         self.map_user_to_idx = {}
         self.map_idx_to_user = []
@@ -18,6 +18,10 @@ class dataIndexing:
         self.map_movie_to_idx = {}
         self.map_idx_to_movie = []
         self.data_by_movie_id = defaultdict(list)
+        
+        
+       
+        
 
     def get_data(self):
         with open(self.data_dir, "r") as file:
@@ -148,6 +152,10 @@ class dataIndexing:
         N = len(self.data_by_movie_id)
         user_biases = np.zeros(M)
         item_biases = np.zeros(N)
+        
+        
+        self.users_latents = np.random.randn(M, self.factors_number)
+        self.items_latents = np.random.randn(self.factors_number, N)
 
         losses = []
         rmses = []
@@ -157,19 +165,47 @@ class dataIndexing:
                 bias = 0
                 item_counter = 0
                 for n, r in self.data_by_user_id[m]:
-                    bias += lambd*(r - item_biases[self.map_idx_to_movie.index(n)])
+                    u_m = self.users_latents[m,:]
+                    v_n = self.items_latents[:,self.map_idx_to_movie.index(n)]
+                    bias += lambd*(r - item_biases[self.map_idx_to_movie.index(n)] -np.dot(u_m, v_n))
                     item_counter += 1
                 bias = bias/(lambd * item_counter + gamma) 
                 user_biases[m] = bias
+                # user traits
+                # fisrt part of um
+                f_u_m  = np.zeros((self.factors_number, self.factors_number))
+                #second part of um
+                s_u_m  = np.zeros((self.factors_number, 1))
+                for n, r in self.data_by_user_id[m]:
+                    v_n = self.items_latents[:, self.map_idx_to_movie.index(n)]
+                    f_u_m += np.outer(v_n, v_n) 
+                    s_u_m+= (v_n*(r-user_biases[m]-item_biases[self.map_idx_to_movie.index(n)])).reshape(self.factors_number,1)
+                self.users_latents[m, :] = (np.linalg.inv(lambd*f_u_m + gamma*np.identity(self.factors_number))@(lambd*s_u_m)).reshape(1,self.factors_number)
+                
             # items biases computation
             for n in range(N):
                 bias = 0
                 user_counter = 0
                 for m, r in self.data_by_movie_id[n]:
-                    bias += lambd*(r - user_biases[self.map_idx_to_user.index(m)])
+                    u_m = self.users_latents[self.map_idx_to_user.index(m),:]
+                    v_n = self.items_latents[:,n]
+                    bias += lambd*(r - user_biases[self.map_idx_to_user.index(m)]-np.dot(u_m, v_n))
                     user_counter += 1
                 bias = bias/(lambd*user_counter + gamma) 
                 item_biases[n] = bias
+                # item traits
+                # fisrt part of v_n
+                f_v_n  = np.zeros((self.factors_number, self.factors_number))
+                #second part of vn
+                s_v_n  = np.zeros((1, self.factors_number))
+                for m, r in self.data_by_movie_id[n]:
+                    u_m = self.users_latents[self.map_idx_to_user.index(m), :]
+                    f_v_n += np.outer(u_m, u_m) 
+                    s_v_n+= (u_m*(r-item_biases[n]-user_biases[self.map_idx_to_user.index(m)])).reshape(1, self.factors_number)
+                vn = (np.linalg.inv(lambd*f_v_n + gamma*np.identity(self.factors_number))@(lambd*s_v_n.reshape(self.factors_number,1)))
+                vn = vn.reshape(1, self.factors_number)
+                self.items_latents[:, n] = vn
+                
 
             loss, rmse = self.loss_function(user_biases, item_biases, lambd = lambd, gamma = gamma)
             if not i%10:
@@ -181,14 +217,16 @@ class dataIndexing:
         
     def  loss_function(self, user_biases, item_biases, lambd = 0.5, gamma = 0.5):
         M = len(self.data_by_user_id)
-        loss= -gamma/2*np.sum(user_biases**2)
+        loss= gamma/2*np.sum(user_biases**2) + gamma/2*np.sum(item_biases**2)
         rmse_list=[]
         for m in range(M):
             user_loss=[]
             for n, r in self.data_by_user_id[m]:
-                user_loss.append((r-user_biases[m]-item_biases[self.map_idx_to_movie.index(n)])**2)
-                rmse_list.append((r-user_biases[m]-item_biases[self.map_idx_to_movie.index(n)])**2)
-            loss+= -sum(user_loss)/2*lambd
+                u_m = self.users_latents[m,:]
+                v_n = self.items_latents[:,self.map_idx_to_movie.index(n)]
+                user_loss.append((r-user_biases[m] -np.dot(u_m, v_n) -item_biases[self.map_idx_to_movie.index(n)])**2)
+                rmse_list.append((r-user_biases[m] -np.dot(u_m, v_n)  -item_biases[self.map_idx_to_movie.index(n)])**2)
+            loss+= sum(user_loss)/2*lambd
         rmse = np.mean(rmse_list)
         return loss, rmse
 
