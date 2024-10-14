@@ -148,11 +148,11 @@ class dataIndexing:
 
         plt.show()
     
-    def alternating_least_square_biases(self, data, lambd=0.5, gamma=0.5, iterations = 1000):
+    def alternating_least_square_biases(self, data_user, data_movie, lambd=0.5, gamma=0.5, iterations = 1000):
         # number of users
-        M = len(self.data_by_user_id)
+        M = len(data_user)
         # number of items
-        N = len(self.data_by_movie_id)
+        N = len(data_movie)
         user_biases = np.zeros(M)
         item_biases = np.zeros(N)
         
@@ -167,7 +167,7 @@ class dataIndexing:
             for m in range(M):
                 bias = 0
                 item_counter = 0
-                for n, r in self.data_by_user_id[m]:
+                for n, r in data_user[m]:
                     u_m = self.users_latents[m,:]
                     v_n = self.items_latents[:,self.map_idx_to_movie.index(n)]
                     bias += lambd*(r - item_biases[self.map_idx_to_movie.index(n)] -np.dot(u_m, v_n))
@@ -179,7 +179,7 @@ class dataIndexing:
                 f_u_m  = np.zeros((self.factors_number, self.factors_number))
                 #second part of um
                 s_u_m  = np.zeros((self.factors_number, 1))
-                for n, r in self.data_by_user_id[m]:
+                for n, r in self.data_user[m]:
                     v_n = self.items_latents[:, self.map_idx_to_movie.index(n)]
                     f_u_m += np.outer(v_n, v_n) 
                     s_u_m+= (v_n*(r-user_biases[m]-item_biases[self.map_idx_to_movie.index(n)])).reshape(self.factors_number,1)
@@ -189,7 +189,7 @@ class dataIndexing:
             for n in range(N):
                 bias = 0
                 user_counter = 0
-                for m, r in self.data_by_movie_id[n]:
+                for m, r in self.data_movie[n]:
                     u_m = self.users_latents[self.map_idx_to_user.index(m),:]
                     v_n = self.items_latents[:,n]
                     bias += lambd*(r - user_biases[self.map_idx_to_user.index(m)]-np.dot(u_m, v_n))
@@ -201,7 +201,7 @@ class dataIndexing:
                 f_v_n  = np.zeros((self.factors_number, self.factors_number))
                 #second part of vn
                 s_v_n  = np.zeros((1, self.factors_number))
-                for m, r in self.data_by_movie_id[n]:
+                for m, r in self.data_movie[n]:
                     u_m = self.users_latents[self.map_idx_to_user.index(m), :]
                     f_v_n += np.outer(u_m, u_m) 
                     s_v_n+= (u_m*(r-item_biases[n]-user_biases[self.map_idx_to_user.index(m)])).reshape(1, self.factors_number)
@@ -210,7 +210,7 @@ class dataIndexing:
                 self.items_latents[:, n] = vn
                 
 
-            loss, rmse = self.loss_function(user_biases, item_biases, lambd = lambd, gamma = gamma)
+            loss, rmse = self.loss_function(data_user, user_biases, item_biases, lambd = lambd, gamma = gamma)
             if not i%10:
                 print(f"Iteration{i}: loss = {loss}; RMSE = {rmse}")
             losses.append(loss)
