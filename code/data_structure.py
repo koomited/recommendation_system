@@ -136,15 +136,18 @@ class dataIndexing:
         ax.set_title("Average Rating per Movie")
         plt.show()
 
-    def line_plot(self, data, xaxis, yaxis, title):
-
-        # _, _, losses = self.alternating_least_square_biases(lambd=0.5, gamma=0.5, iterations = 10)
+    def line_plot(self, data_train, data_test, xaxis, yaxis, title):
 
         fig, ax = plt.subplots(figsize=(8, 6))
-        ax.plot(range(1,len(data)+1), data)
+        ax.plot(range(1,len(data_train)+1), data_train,  color='red', lw=1, label='Training')
+        ax.plot(range(1,len(data_test)+1), data_test, color='blue', lw=1, label='Testing')
         ax.set_xlabel(xaxis)
         ax.set_ylabel(yaxis)
         ax.set_title(title)
+        ax.legend(loc="upper right", frameon=False)
+          
+        ax.set_title(title, fontsize=18, pad=20)
+
 
         plt.show()
     
@@ -162,6 +165,8 @@ class dataIndexing:
 
         losses = []
         rmses = []
+        losses_test=[]
+        rmses_test = []
         for i in range(iterations):
             # users biases computation
             for m in range(M):
@@ -179,7 +184,7 @@ class dataIndexing:
                 f_u_m  = np.zeros((self.factors_number, self.factors_number))
                 #second part of um
                 s_u_m  = np.zeros((self.factors_number, 1))
-                for n, r in self.data_user[m]:
+                for n, r in data_user[m]:
                     v_n = self.items_latents[:, self.map_idx_to_movie.index(n)]
                     f_u_m += np.outer(v_n, v_n) 
                     s_u_m+= (v_n*(r-user_biases[m]-item_biases[self.map_idx_to_movie.index(n)])).reshape(self.factors_number,1)
@@ -189,7 +194,7 @@ class dataIndexing:
             for n in range(N):
                 bias = 0
                 user_counter = 0
-                for m, r in self.data_movie[n]:
+                for m, r in data_movie[n]:
                     u_m = self.users_latents[self.map_idx_to_user.index(m),:]
                     v_n = self.items_latents[:,n]
                     bias += lambd*(r - user_biases[self.map_idx_to_user.index(m)]-np.dot(u_m, v_n))
@@ -201,7 +206,7 @@ class dataIndexing:
                 f_v_n  = np.zeros((self.factors_number, self.factors_number))
                 #second part of vn
                 s_v_n  = np.zeros((1, self.factors_number))
-                for m, r in self.data_movie[n]:
+                for m, r in data_movie[n]:
                     u_m = self.users_latents[self.map_idx_to_user.index(m), :]
                     f_v_n += np.outer(u_m, u_m) 
                     s_v_n+= (u_m*(r-item_biases[n]-user_biases[self.map_idx_to_user.index(m)])).reshape(1, self.factors_number)
@@ -211,11 +216,14 @@ class dataIndexing:
                 
 
             loss, rmse = self.loss_function(data_user, user_biases, item_biases, lambd = lambd, gamma = gamma)
+            loss_test, rmse_test = self.loss_function(self.data_by_user_test, user_biases, item_biases, lambd = lambd, gamma = gamma)
             if not i%10:
                 print(f"Iteration{i}: loss = {loss}; RMSE = {rmse}")
             losses.append(loss)
             rmses.append(rmse)
-        return user_biases, item_biases, losses, rmses
+            losses_test.append(loss_test)
+            rmses_test.append(rmse_test)
+        return user_biases, item_biases, losses, rmses, losses_test, rmses_test
 
         
     def  loss_function(self, data, user_biases, item_biases, lambd = 0.5, gamma = 0.5):
@@ -236,7 +244,7 @@ class dataIndexing:
                 rmse_list.append((r-user_biases[m] -np.dot(u_m, v_n)  -item_biases[self.map_idx_to_movie.index(n)])**2)
             loss+= lambd*sum(user_loss)/2 + gamma*item_vector_loss/2 
         loss += gamma*user_vector_loss/2
-        rmse = np.mean(rmse_list)
+        rmse = np.sqrt(np.mean(rmse_list))
         return loss, rmse
 
     def train_test_split(self):
@@ -296,6 +304,11 @@ class dataIndexing:
                 else:
                     self.data_by_movie_test[self.map_idx_to_movie.index(movie_id)].append((user_id, rating))
                     self.data_by_movie_train[self.map_idx_to_movie.index(movie_id)].append(())
+        
+        self.data_by_user_train = [ list(filter(lambda x: len(x) > 0, list_tuples))  for list_tuples in self.data_by_user_train]
+        self.data_by_movie_train = [ list(filter(lambda x: len(x) > 0, list_tuples))  for list_tuples in self.data_by_movie_train]
+        self.data_by_user_test = [ list(filter(lambda x: len(x) > 0, list_tuples))  for list_tuples in self.data_by_user_test]
+        self.data_by_movie_test = [ list(filter(lambda x: len(x) > 0, list_tuples))  for list_tuples in self.data_by_movie_test]
 
 
 
