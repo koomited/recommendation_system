@@ -230,7 +230,8 @@ class AlternatingLeastSquare:
                 tepochs.set_postfix(test_rmse=rmse_test)
                 # if not i%10:
                 #     print(f"Iteration{i}: train loss = {loss};  test loss = {loss_test}; train RMSE = {rmse}; trest RMSE = {rmse_test}")
-                
+        self.items_biases = item_biases      
+        self.users_biases = user_biases      
         return user_biases, item_biases, losses_train, rmses_train, losses_test, rmses_test
 
         
@@ -257,6 +258,18 @@ class AlternatingLeastSquare:
         loss += gamma*user_vector_loss/2
         rmse = np.sqrt(np.mean(rmse_list))
         return loss, rmse
+
+    def compute_items_score(self):
+        scores_for_items = self.users_latents@self.items_latents + 0.05*self.items_biases.reshape(1,-1)
+        self.item_scores = scores_for_items
+        return scores_for_items 
+
+    # def predict_ratings(self):
+    #     ratings_predicted = self.users_latents@self.items_latents
+    #     self.predicted_ratings = ratings_predicted
+    #     return ratings_predicted
+    
+
 
     # def train_test_split(self):
 
