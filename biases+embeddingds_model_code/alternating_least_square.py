@@ -6,7 +6,7 @@ from scipy.stats import norm
 from collections import defaultdict
 import random
 from tqdm import tqdm 
-
+import pandas as pd
 
 class AlternatingLeastSquare:
     def __init__(self, data_dir, embedding_dim:int) -> None:
@@ -259,15 +259,43 @@ class AlternatingLeastSquare:
         rmse = np.sqrt(np.mean(rmse_list))
         return loss, rmse
 
-    def compute_items_score(self):
+    def compute_items_scores(self):
         scores_for_items = self.users_latents@self.items_latents + 0.05*self.items_biases.reshape(1,-1)
-        self.item_scores = scores_for_items
-        return scores_for_items 
+        self.items_scores = scores_for_items
+        # return scores_for_items 
 
-    # def predict_ratings(self):
-    #     ratings_predicted = self.users_latents@self.items_latents
-    #     self.predicted_ratings = ratings_predicted
-    #     return ratings_predicted
+    def get_movie_title_by_id(self, movies_dir, movie_id):
+        movies_df = pd.read_csv(movies_dir)
+        movies_df.index= movies_df["movieId"]
+        movies_df.drop(columns="movieId")
+        movie_title = movies_df.loc[movie_id,"title"]
+        return movie_title
+
+    def recommendation_for_user(self, movies_dir, user_id):
+        self.compute_items_scores()
+        user_index = self.map_user_to_idx[user_id]
+        items_scores = self.items_scores[user_index,:]
+        movies_may_be_recommended_indexes = np.argpartition(items_scores, -25)[-25:]
+
+        # check if the user already rated one of them
+        for movie_id, _ in self.data_by_user_id[user_index]:
+            movie_index = self.map_movie_to_idx[movie_id]
+            if movie_index in movies_may_be_recommended_indexes:
+                movies_may_be_recommended_indexes = np.setdiff1d(movies_may_be_recommended_indexes, [movie_index])
+
+        if len( movies_may_be_recommended_indexes)>5:
+            movies_may_be_recommended_indexes = movies_may_be_recommended_indexes[:5]
+            
+        movies_to_recommend_ids = []
+        for index in movies_may_be_recommended_indexes:
+            movies_to_recommend_ids.append(self.map_idx_to_movie[index])
+        
+        movies_names = []
+        for movie_id in movies_to_recommend_ids:
+            movies_names.append(self.get_movie_title_by_id(movies_dir, movie_id))
+            
+        print(f"User {user_id} may also like:{movies_names}")
+
     
 
 
