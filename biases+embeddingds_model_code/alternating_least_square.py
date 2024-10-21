@@ -296,7 +296,48 @@ class AlternatingLeastSquare:
             
         print(f"User {user_id} may also like:{movies_names}")
 
-    
+    def create_dummy_user(self, movie_id, rating):
+         self.data_by_user_id.append([(movie_id, rating)])
+
+    def recommendation_for_new_user(self, movies_dir, lambd, gamma):
+        self.compute_items_scores()
+
+
+        get_new_user_movie_id = self.data_by_user_id[-1][0][0]
+
+        rating = self.data_by_user_id[-1][0][1]
+
+        get_this_movie_index = self.map_movie_to_idx[get_new_user_movie_id]
+
+        # get the item_vector
+        item_vector = self.items_latents[:, get_this_movie_index]
+
+        #get this item baias
+        item_bias = self.items_biases[get_this_movie_index]
+
+        #compute new user embedding
+        new_user_embdding = np.linalg.inv(lambd*np.outer(item_vector, item_vector)+gamma*np.eye(self.factors_number))@(lambd*vn*(rating - item_bias))
+
+
+        # compute the score 
+        scores = new_user_embdding@self.items_latents + 0.05*self.items_biases.reshape(1,-1)
+
+        scores = np.dot(new_user_embdding, item_vector) +0.05* item_bias
+
+
+        movies_may_be_recommended_indexes = np.argpartition(scores, -5)[-5:]
+
+      
+        movies_to_recommend_ids = []
+        for index in movies_may_be_recommended_indexes:
+            movies_to_recommend_ids.append(self.map_idx_to_movie[index])
+        
+        movies_names = []
+        for movie_id in movies_to_recommend_ids:
+            movies_names.append(self.get_movie_title_by_id(movies_dir, movie_id))
+            
+        print(f"You may also like:{movies_names}")
+
 
 
     # def train_test_split(self):
