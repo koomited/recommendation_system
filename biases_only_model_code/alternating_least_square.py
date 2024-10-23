@@ -9,8 +9,8 @@ from tqdm import tqdm
 
 np.random.seed(42)
 
-params = {'pdf.fonttype': 3, 'axes.labelsize': 20, 'xtick.labelsize':20
-, 'ytick.labelsize':20, 'legend.fontsize':20, "font.size":20}
+params = {'pdf.fonttype': 3, 'axes.labelsize': 18, 'xtick.labelsize':18
+, 'ytick.labelsize':18, 'legend.fontsize':18, "font.size":18}
 plt.rcParams.update(params)
 
 
@@ -128,8 +128,8 @@ class AlternatingLeastSquare:
         ax.set_xlabel("Degree")
         ax.set_ylabel("Frequencies")
         # ax.set_title("Ratings: Log log plot")
-        ax.legend(bbox_to_anchor=(1.06, .6), loc="center left",  frameon=False)
-        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight")
+        ax.legend(bbox_to_anchor=(1.06, .6), loc="center left", frameon=False)
+        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi = 1000)
         
         plt.show()
 
@@ -142,20 +142,20 @@ class AlternatingLeastSquare:
         ax.set_xlabel("Average ratings")
         # ax.set_ylabel("Frequencies")
         # ax.set_title("Average Rating per Movie")
-        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight")
+        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=1000)
 
         plt.show()
 
     def line_plot(self, data_train, data_test, xaxis, yaxis, fig_name):
 
         fig, ax = plt.subplots(figsize=(8, 6))
-        ax.plot(range(1,len(data_train)+1), data_train,  color='red', lw=1, label='Training')
-        ax.plot(range(1,len(data_test)+1), data_test, color='blue', lw=1, label='Testing')
+        ax.plot(range(1,len(data_train)+1), data_train,  color='blue', lw=1, label='Training')
+        ax.plot(range(1,len(data_test)+1), data_test, color='red', lw=1, label='Testing')
         ax.set_xlabel(xaxis)
         ax.set_ylabel(yaxis)
-        ax.legend(bbox_to_anchor=(1.06, .6), loc="center left",
-                       title_fontsize=15, frameon=False)
-        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight")
+        ax.legend(bbox_to_anchor=(1.06, .6), loc="center left", frameon=False)
+
+        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=1000)
 
         plt.show()
 
@@ -169,10 +169,73 @@ class AlternatingLeastSquare:
    
         # ax.set_title(title, fontsize=18, pad=20)
 
-        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight")
+        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=1000)
 
         plt.show()
-    
+
+    def plot_power_law(self, fig_name):
+        number_of_movies_per_user = [len(user_movies) for user_movies in self.data_by_user_id]
+        number_of_users_per_movie = [len(movie_users) for movie_users in self.data_by_movie_id]
+        minimum_number_rating = min(number_of_movies_per_user)
+
+        users_ratings_number_frequency = {num_ratings:  number_of_movies_per_user.count(num_ratings)  for num_ratings in number_of_movies_per_user }
+        movies_ratings_number_frequency = {num_ratings: number_of_users_per_movie.count(num_ratings)  for num_ratings in number_of_users_per_movie }
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.loglog(users_ratings_number_frequency.keys(),  users_ratings_number_frequency.values(),
+                  marker = ".", ls = "none", color = "m", label="Users")
+        ax.loglog(movies_ratings_number_frequency.keys(), movies_ratings_number_frequency.values() ,
+                  marker = ".", ls = "none", color = "blue", label="Movies")
+        ax.axvline(x = minimum_number_rating, color = 'r', ls="--")
+        ax.text(10**1*2.3, 10**3*1.8, "Minimun ratings number", color ="r")#fontsize = 12
+        ax.set_xlabel("Degree")
+        ax.set_ylabel("Frequencies")
+        # ax.set_title("Ratings: Log log plot")
+        ax.legend(bbox_to_anchor=(1.06, .6), loc="center left", frameon=False)
+        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi = 1000)
+        
+        plt.show()
+
+
+    def plot_average_rating_hist(self, fig_name):
+   
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.histplot(self.average_rating_per_movie(),stat="probability", bins=10, kde=True, kde_kws={"bw_adjust":3}, color="m")
+        # sns.distplot(self.average_rating_per_movie(), kde=False, fit=norm, color="m")
+        ax.set_xlabel("Average ratings")
+        # ax.set_ylabel("Frequencies")
+        # ax.set_title("Average Rating per Movie")
+        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=1000)
+
+        plt.show()
+
+    def line_plot(self, data_train, data_test, xaxis, yaxis, fig_name):
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.plot(range(1,len(data_train)+1), data_train,  color='blue', lw=1, label='Training')
+        ax.plot(range(1,len(data_test)+1), data_test, color='red', lw=1, label='Testing')
+        ax.set_xlabel(xaxis)
+        ax.set_ylabel(yaxis)
+        ax.legend(bbox_to_anchor=(1.06, .6), loc="center left", frameon=False)
+
+        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=1000)
+
+        plt.show()
+
+    def plot_training_loss_only(self, losses_train, xaxis, yaxis, fig_name):
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.plot(range(1,len(losses_train)+1), losses_train,  color='blue', lw=1, label='Training')
+        ax.set_xlabel(xaxis)
+        ax.set_ylabel(yaxis)
+        # ax.legend(loc="upper right", frameon=False)
+   
+        # ax.set_title(title, fontsize=18, pad=20)
+
+        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=1000)
+
+        plt.show()
+
     
     def alternating_least_square(self, data_user, data_movie, lambd=0.05, gamma=0.05, epochs = 1000):
         # number of users
