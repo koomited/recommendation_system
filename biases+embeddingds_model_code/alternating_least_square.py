@@ -8,6 +8,14 @@ import random
 from tqdm import tqdm 
 import pandas as pd
 
+import matplotlib.pylab as pylab
+
+np.random.seed(42)
+
+params = {'pdf.fonttype': 3, 'axes.labelsize': 20, 'xtick.labelsize':20
+, 'ytick.labelsize':20, 'legend.fontsize':20, "font.size":20}
+plt.rcParams.update(params)
+
 class AlternatingLeastSquare:
     def __init__(self, data_dir, embedding_dim:int) -> None:
         self.data_dir = data_dir
@@ -104,7 +112,7 @@ class AlternatingLeastSquare:
             average_rating_per_movie.append(rating_sum/len(movie))
         return average_rating_per_movie
 
-    def plot_power_law(self):
+    def plot_power_law(self, fig_name):
         number_of_movies_per_user = [len(user_movies) for user_movies in self.data_by_user_id]
         number_of_users_per_movie = [len(movie_users) for movie_users in self.data_by_movie_id]
         minimum_number_rating = min(number_of_movies_per_user)
@@ -118,37 +126,52 @@ class AlternatingLeastSquare:
         ax.loglog(movies_ratings_number_frequency.keys(), movies_ratings_number_frequency.values() ,
                   marker = ".", ls = "none", color = "blue", label="Movies")
         ax.axvline(x = minimum_number_rating, color = 'r', ls="--")
-        ax.text(10**1*2.3, 10**3*1.8, "Minimun ratings number", color ="r")
+        ax.text(10**1*2.3, 10**3*1.8, "Minimun ratings number", color ="r")#fontsize = 12
         ax.set_xlabel("Degree")
         ax.set_ylabel("Frequencies")
-        ax.set_title("Ratings: Log log plot")
-        ax.legend(bbox_to_anchor=(1.06, .6), loc="center left",
-                       title_fontsize=15, frameon=False)
+        # ax.set_title("Ratings: Log log plot")
+        ax.legend(bbox_to_anchor=(1.06, .6), loc="center left", frameon=False)
+        plt.savefig(f"../images/{fig_name}.pdf", format="pdf", bbox_inches="tight")
+        
         plt.show()
 
 
-    def plot_average_rating_hist(self):
+    def plot_average_rating_hist(self, fig_name):
    
         fig, ax = plt.subplots(figsize=(8, 6))
         sns.histplot(self.average_rating_per_movie(),stat="probability", bins=10, kde=True, kde_kws={"bw_adjust":3}, color="m")
         # sns.distplot(self.average_rating_per_movie(), kde=False, fit=norm, color="m")
         ax.set_xlabel("Average ratings")
         # ax.set_ylabel("Frequencies")
-        ax.set_title("Average Rating per Movie")
+        # ax.set_title("Average Rating per Movie")
+        plt.savefig(f"../images/{fig_name}.pdf", format="pdf", bbox_inches="tight")
+
         plt.show()
 
-    def line_plot(self, data_train, data_test, xaxis, yaxis, title):
+    def line_plot(self, data_train, data_test, xaxis, yaxis, fig_name):
 
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.plot(range(1,len(data_train)+1), data_train,  color='red', lw=1, label='Training')
         ax.plot(range(1,len(data_test)+1), data_test, color='blue', lw=1, label='Testing')
         ax.set_xlabel(xaxis)
         ax.set_ylabel(yaxis)
-        ax.set_title(title)
-        ax.legend(loc="upper right", frameon=False)
-          
-        ax.set_title(title, fontsize=18, pad=20)
+        ax.legend(bbox_to_anchor=(1.06, .6), loc="center left", frameon=False)
 
+        plt.savefig(f"../images/{fig_name}.pdf", format="pdf", bbox_inches="tight")
+
+        plt.show()
+
+    def plot_training_loss_only(self, losses_train, xaxis, yaxis, fig_name):
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.plot(range(1,len(losses_train)+1), losses_train,  color='blue', lw=1, label='Training')
+        ax.set_xlabel(xaxis)
+        ax.set_ylabel(yaxis)
+        # ax.legend(loc="upper right", frameon=False)
+   
+        # ax.set_title(title, fontsize=18, pad=20)
+
+        plt.savefig(f"../images/{fig_name}.pdf", format="pdf", bbox_inches="tight")
 
         plt.show()
     
@@ -299,9 +322,10 @@ class AlternatingLeastSquare:
     def create_dummy_user(self, movie_id, rating):
          self.data_by_user_id.append([(movie_id, rating)])
 
+    
+    
+    
     def recommendation_for_new_user(self, movies_dir, lambd, gamma):
-        self.compute_items_scores()
-
 
         get_new_user_movie_id = self.data_by_user_id[-1][0][0]
 
@@ -315,28 +339,71 @@ class AlternatingLeastSquare:
         #get this item baias
         item_bias = self.items_biases[get_this_movie_index]
 
-        #compute new user embedding
-        new_user_embdding = np.linalg.inv(lambd*np.outer(item_vector, item_vector)+gamma*np.eye(self.factors_number))@(lambd*vn*(rating - item_bias))
+        #user bias
+        user_bias = np.mean(self.users_biases)
 
+        #compute new user embedding
+        new_user_embdding = np.linalg.inv(lambd*np.outer(item_vector, item_vector)+gamma*np.eye(self.factors_number))@(lambd*item_vector*(rating -user_bias - item_bias))
 
         # compute the score 
-        scores = new_user_embdding@self.items_latents + 0.05*self.items_biases.reshape(1,-1)
+        scores = (new_user_embdding@self.items_latents + 0.05*self.items_biases.reshape(1,-1))[0]
+        
 
-        scores = np.dot(new_user_embdding, item_vector) +0.05* item_bias
 
+        movies_may_be_recommended_indexes = np.argpartition(scores, -10)[-10:]
 
-        movies_may_be_recommended_indexes = np.argpartition(scores, -5)[-5:]
-
-      
         movies_to_recommend_ids = []
         for index in movies_may_be_recommended_indexes:
+            
             movies_to_recommend_ids.append(self.map_idx_to_movie[index])
         
         movies_names = []
         for movie_id in movies_to_recommend_ids:
             movies_names.append(self.get_movie_title_by_id(movies_dir, movie_id))
+        movies_names.reverse()
             
         print(f"You may also like:{movies_names}")
+
+
+
+    # def recommendation_for_new_user(self, movies_dir, lambd, gamma):
+        # self.compute_items_scores()
+
+
+        # get_new_user_movie_id = self.data_by_user_id[-1][0][0]
+
+        # rating = self.data_by_user_id[-1][0][1]
+
+        # get_this_movie_index = self.map_movie_to_idx[get_new_user_movie_id]
+
+        # # get the item_vector
+        # item_vector = self.items_latents[:, get_this_movie_index]
+
+        # #get this item baias
+        # item_bias = self.items_biases[get_this_movie_index]
+
+        # #compute new user embedding
+        # new_user_embdding = np.linalg.inv(lambd*np.outer(item_vector, item_vector)+gamma*np.eye(self.factors_number))@(lambd**(rating - item_bias))
+
+
+        # # compute the score 
+        # scores = new_user_embdding@self.items_latents + 0.05*self.items_biases.reshape(1,-1)
+
+        # scores = np.dot(new_user_embdding, item_vector) +0.05* item_bias
+
+
+        # movies_may_be_recommended_indexes = np.argpartition(scores, -5)[-5:]
+
+      
+        # movies_to_recommend_ids = []
+        # for index in movies_may_be_recommended_indexes:
+        #     movies_to_recommend_ids.append(self.map_idx_to_movie[index])
+        
+        # movies_names = []
+        # for movie_id in movies_to_recommend_ids:
+        #     movies_names.append(self.get_movie_title_by_id(movies_dir, movie_id))
+            
+        # print(f"You may also like:{movies_names}")
 
 
 
