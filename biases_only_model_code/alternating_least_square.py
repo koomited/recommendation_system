@@ -286,7 +286,7 @@ class AlternatingLeastSquare:
         
     def  loss_rmse_function(self, data, user_biases, item_biases, lambd = 0.5, gamma = 0.5):
         M = len(data)
-        loss= 0
+        loss= gamma*np.sum(user_biases**2)/2 + gamma*np.sum(item_biases**2)/2
         rmse_list=[]
         for m in range(M):
             ratings_loss = []
@@ -297,7 +297,6 @@ class AlternatingLeastSquare:
             loss+= lambd*sum(ratings_loss)/2 
         rmse = np.sqrt(np.mean(rmse_list))
         return loss, rmse
-
     # def train_test_split(self):
 
     #     self.map_user_to_idx = {}

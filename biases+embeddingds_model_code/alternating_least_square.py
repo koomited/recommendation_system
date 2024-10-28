@@ -175,7 +175,7 @@ class AlternatingLeastSquare:
 
         plt.show()
 
-    def alternating_least_square(self, data_user, data_movie, lambd=0.05, gamma=0.05, epochs = 1000):
+    def alternating_least_square(self, data_user, data_movie, lambd=0.05,tau=0.01, gamma=0.05, epochs = 1000):
         # number of users
         M = len(data_user)
         # number of items
@@ -216,7 +216,7 @@ class AlternatingLeastSquare:
                         item_embedding = self.items_latents[:, self.map_movie_to_idx[n]]
                         f_user_embedding += np.outer(item_embedding, item_embedding) 
                         s_user_embedding+= (item_embedding*(r-user_biases[m]-item_biases[self.map_movie_to_idx[n]])).reshape(self.factors_number,1)
-                    self.users_latents[m, :] = (np.linalg.inv(lambd*f_user_embedding + gamma*np.identity(self.factors_number))@(lambd*s_user_embedding )).reshape(1,self.factors_number)
+                    self.users_latents[m, :] = (np.linalg.inv(lambd*f_user_embedding + tau*np.identity(self.factors_number))@(lambd*s_user_embedding )).reshape(1,self.factors_number)
                     
                 # items biases and embedding computation
                 for n in range(N):
@@ -239,13 +239,13 @@ class AlternatingLeastSquare:
                         user_embedding = self.users_latents[self.map_user_to_idx[m], :]
                         f_item_embedding += np.outer(user_embedding, user_embedding) 
                         s_item_embedding+= (user_embedding*(r-item_biases[n]-user_biases[self.map_user_to_idx[m]])).reshape(1, self.factors_number)
-                    item_embedding = (np.linalg.inv(lambd*f_item_embedding + gamma*np.identity(self.factors_number))@(lambd*s_item_embedding.reshape(self.factors_number,1)))
+                    item_embedding = (np.linalg.inv(lambd*f_item_embedding + tau*np.identity(self.factors_number))@(lambd*s_item_embedding.reshape(self.factors_number,1)))
                     item_embedding = item_embedding.reshape(1, self.factors_number)
                     self.items_latents[:, n] = item_embedding
                     
 
-                loss_train, rmse_train= self.loss_rmse_function(data_user, user_biases, item_biases, lambd = lambd, gamma = gamma)
-                loss_test, rmse_test = self.loss_rmse_function(self.data_by_user_test, user_biases, item_biases, lambd = lambd, gamma = gamma)
+                loss_train, rmse_train= self.loss_rmse_function(data_user, user_biases, item_biases, lambd = lambd, tau=tau, gamma = gamma)
+                loss_test, rmse_test = self.loss_rmse_function(self.data_by_user_test, user_biases, item_biases, lambd = lambd, tau=tau, gamma = gamma)
                 losses_train.append(loss_train)
                 rmses_train.append(rmse_train)
                 losses_test.append(loss_test)
@@ -258,10 +258,12 @@ class AlternatingLeastSquare:
         return user_biases, item_biases, losses_train, rmses_train, losses_test, rmses_test
 
         
-    def  loss_rmse_function(self, data, user_biases, item_biases, lambd = 0.5, gamma = 0.5):
+    def  loss_rmse_function(self, data, user_biases, item_biases, lambd = 0.5, tau=0.01, gamma = 0.5):
         M = len(data)
         # initialize loss for iterations
         loss= gamma*np.sum(user_biases**2)/2 + gamma*np.sum(item_biases**2)/2
+        item_vector_loss =np.sum(self.items_latents**2)*tau/2
+        
         rmse_list=[]
         user_vector_loss = 0
         # for each user
@@ -269,16 +271,15 @@ class AlternatingLeastSquare:
             ratings_loss = []
             
             user_embedding = self.users_latents[m,:]
-            user_vector_loss += np.dot(user_embedding, user_embedding)
-            item_vector_loss = 0
+            user_vector_loss += np.dot(user_embedding, user_embedding)            
             # for each item rated by the user
             for n, r in data[m]:
                 item_embedding = self.items_latents[:,self.map_movie_to_idx[n]]
-                item_vector_loss +=np.dot(item_embedding , item_embedding )
                 ratings_loss.append((r-user_biases[m] -item_biases[self.map_movie_to_idx[n]]-np.dot(user_embedding, item_embedding ))**2)# 
                 rmse_list.append((r-user_biases[m] -item_biases[self.map_movie_to_idx[n]] -np.dot(user_embedding, item_embedding ) )**2)# 
-            loss+= lambd*sum(ratings_loss)/2 + gamma*item_vector_loss/2 
-        loss += gamma*user_vector_loss/2
+            loss+= lambd*sum(ratings_loss)/2 
+            
+        loss += tau*user_vector_loss/2 + item_vector_loss
         rmse = np.sqrt(np.mean(rmse_list))
         return loss, rmse
 
@@ -325,7 +326,7 @@ class AlternatingLeastSquare:
     
     
     
-    def recommendation_for_new_user(self, movies_dir, lambd, gamma):
+    def recommendation_for_new_user(self, movies_dir, lambd, tau):
 
         get_new_user_movie_id = self.data_by_user_id[-1][0][0]
 
@@ -340,17 +341,18 @@ class AlternatingLeastSquare:
         item_bias = self.items_biases[get_this_movie_index]
 
         #user bias
-        user_bias = np.mean(self.users_biases)
+        # user_bias = np.mean(self.users_biases)
 
         #compute new user embedding
-        new_user_embdding = np.linalg.inv(lambd*np.outer(item_vector, item_vector)+gamma*np.eye(self.factors_number))@(lambd*item_vector*(rating -user_bias - item_bias))
+        new_user_embdding = np.linalg.inv(lambd*np.outer(item_vector, item_vector)+tau*np.eye(self.factors_number))@(lambd*item_vector*(rating - item_bias))
 
         # compute the score 
         scores = (new_user_embdding@self.items_latents + 0.05*self.items_biases.reshape(1,-1))[0]
         
 
-
-        movies_may_be_recommended_indexes = np.argpartition(scores, -10)[-10:]
+        movies_may_be_recommended_indexes = np.argsort(scores)[-10:]
+        print(scores[movies_may_be_recommended_indexes])
+        
 
         movies_to_recommend_ids = []
         for index in movies_may_be_recommended_indexes:
@@ -361,6 +363,7 @@ class AlternatingLeastSquare:
         for movie_id in movies_to_recommend_ids:
             movies_names.append(self.get_movie_title_by_id(movies_dir, movie_id))
         movies_names.reverse()
+        
             
         print(f"You may also like:{movies_names}")
 
@@ -491,7 +494,7 @@ class AlternatingLeastSquare:
 
                 # Assign randomly to train or test
                 flip_coin = random.random()
-                is_train = flip_coin < 0.5
+                is_train = flip_coin < 0.8
 
                 # Handle user mapping
                 if user_id not in self.map_user_to_idx:
@@ -519,7 +522,37 @@ class AlternatingLeastSquare:
                     self.data_by_user_test[user_idx].append((movie_id, rating))
                     self.data_by_movie_test[movie_idx].append((user_id, rating))
 
-                
+    def plot_embedding(self, movies_dir, points_number, fig_name):
+        items_x = self.items_latents[0,:][:points_number]
+        items_y = self.items_latents[1,:][:points_number]
+        
+       
+        
+        movies_ids = []
+        for index in range(len(items_x)):
+            
+            movies_ids.append(self.map_idx_to_movie[index])
+            
+      
+        
+        movies_names = []
+        for movie_id in movies_ids:
+            movies_names.append(self.get_movie_title_by_id(movies_dir, movie_id))
+        
+        fig, ax = plt.subplots()
+        ax.scatter(items_x, items_y, color="m")
+        ax.set_xlabel("Embedding dimenssion 1")
+        ax.set_ylabel("Embedding dimenssion 2")
+        
+
+        for i, txt in enumerate(movies_names):
+            # if i%2:
+            #     continue
+            ax.annotate(txt[:10], (items_x[i], items_y[i]))
+        plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=2000)
+        
+            
+       
 
 
 
