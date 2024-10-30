@@ -350,8 +350,7 @@ class AlternatingLeastSquare:
         scores = (new_user_embdding@self.items_latents + 0.05*self.items_biases.reshape(1,-1))[0]
         
 
-        movies_may_be_recommended_indexes = np.argsort(scores)[-10:]
-        print(scores[movies_may_be_recommended_indexes])
+        movies_may_be_recommended_indexes = np.argsort(scores)[-11:]
         
 
         movies_to_recommend_ids = []
@@ -365,7 +364,7 @@ class AlternatingLeastSquare:
         movies_names.reverse()
         
             
-        print(f"You may also like:{movies_names}")
+        return scores[movies_may_be_recommended_indexes], movies_names 
 
 
 
@@ -546,8 +545,8 @@ class AlternatingLeastSquare:
         
 
         for i, txt in enumerate(movies_names):
-            # if i%2:
-            #     continue
+            if i%2:
+                continue
             ax.annotate(txt[:10], (items_x[i], items_y[i]))
         plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=2000)
         
