@@ -61,38 +61,6 @@ class AlternatingLeastSquare:
         self.data_by_movie_id = [data for data in self.data_by_movie_id.values()]
         self.data_by_user_id = [data for data in self.data_by_user_id.values()]
 
-# class dataIndexing:
-#     def __init__(self, data_dir) -> None:
-#         self.data_dir = data_dir
-#         self.map_user_to_idx = {}
-#         self.map_idx_to_user = []
-#         self.data_by_user_id = []
-
-#         self.map_movie_to_idx = {}
-#         self.map_idx_to_movie = []
-#         self.data_by_movie_id = []
-
-#     def get_data(self):
-#         with open(self.data_dir, "r") as file:
-#             csv_reader = csv.DictReader(file)
-#             for row in csv_reader:
-#                 user_id = int(row["userId"])
-#                 movie_id = int(row["movieId"])
-#                 rating = float(row["rating"])
-#                 if user_id not in self.map_idx_to_user:
-#                     self.map_idx_to_user.append(user_id)
-#                     self.map_user_to_idx[user_id] = self.map_idx_to_user.index(user_id)
-#                     self.data_by_user_id.append([(movie_id, rating)])
-#                 else:
-#                     self.data_by_user_id[self.map_idx_to_user.index(user_id)].append((movie_id, rating))
-
-#                 if movie_id not in self.map_idx_to_movie:
-#                     self.map_idx_to_movie .append(movie_id)
-#                     self.map_movie_to_idx[movie_id] = self.map_idx_to_movie.index(movie_id)
-#                     self.data_by_movie_id.append([(user_id, rating)])
-#                 else:
-#                     self.data_by_movie_id[self.map_idx_to_movie.index(movie_id)].append((user_id, rating))
-
     def get_data_by_user_id(self, user_id):
         position = self.map_idx_to_user.index(user_id)
         user_data = self.data_by_user_id[position]
@@ -129,7 +97,6 @@ class AlternatingLeastSquare:
         ax.text(10**1*2.3, 10**3*1.8, "Minimun ratings number", color ="r")#fontsize = 12
         ax.set_xlabel("Degree")
         ax.set_ylabel("Frequencies")
-        # ax.set_title("Ratings: Log log plot")
         ax.legend(bbox_to_anchor=(1.06, .6), loc="center left", frameon=False)
         plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi = 1000)
         
@@ -140,10 +107,7 @@ class AlternatingLeastSquare:
    
         fig, ax = plt.subplots(figsize=(8, 6))
         sns.histplot(self.average_rating_per_movie(),stat="probability", bins=10, kde=True, kde_kws={"bw_adjust":3}, color="m")
-        # sns.distplot(self.average_rating_per_movie(), kde=False, fit=norm, color="m")
         ax.set_xlabel("Average ratings")
-        # ax.set_ylabel("Frequencies")
-        # ax.set_title("Average Rating per Movie")
         plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=1000)
 
         plt.show()
@@ -167,9 +131,6 @@ class AlternatingLeastSquare:
         ax.plot(range(1,len(losses_train)+1), losses_train,  color='blue', lw=1, label='Training')
         ax.set_xlabel(xaxis)
         ax.set_ylabel(yaxis)
-        # ax.legend(loc="upper right", frameon=False)
-   
-        # ax.set_title(title, fontsize=18, pad=20)
 
         plt.savefig(f"plots/{fig_name}.pdf", format="pdf", bbox_inches="tight", dpi=1000)
 
@@ -251,8 +212,7 @@ class AlternatingLeastSquare:
                 losses_test.append(loss_test)
                 rmses_test.append(rmse_test)
                 tepochs.set_postfix(test_rmse=rmse_test)
-                # if not i%10:
-                #     print(f"Iteration{i}: train loss = {loss};  test loss = {loss_test}; train RMSE = {rmse}; trest RMSE = {rmse_test}")
+ 
         self.items_biases = item_biases      
         self.users_biases = user_biases      
         return user_biases, item_biases, losses_train, rmses_train, losses_test, rmses_test
@@ -340,8 +300,7 @@ class AlternatingLeastSquare:
         #get this item baias
         item_bias = self.items_biases[get_this_movie_index]
 
-        #user bias
-        # user_bias = np.mean(self.users_biases)
+
 
         #compute new user embedding
         new_user_embdding = np.linalg.inv(lambd*np.outer(item_vector, item_vector)+tau*np.eye(self.factors_number))@(lambd*item_vector*(rating - item_bias))
@@ -367,111 +326,6 @@ class AlternatingLeastSquare:
         return scores[movies_may_be_recommended_indexes], movies_names 
 
 
-
-    # def recommendation_for_new_user(self, movies_dir, lambd, gamma):
-        # self.compute_items_scores()
-
-
-        # get_new_user_movie_id = self.data_by_user_id[-1][0][0]
-
-        # rating = self.data_by_user_id[-1][0][1]
-
-        # get_this_movie_index = self.map_movie_to_idx[get_new_user_movie_id]
-
-        # # get the item_vector
-        # item_vector = self.items_latents[:, get_this_movie_index]
-
-        # #get this item baias
-        # item_bias = self.items_biases[get_this_movie_index]
-
-        # #compute new user embedding
-        # new_user_embdding = np.linalg.inv(lambd*np.outer(item_vector, item_vector)+gamma*np.eye(self.factors_number))@(lambd**(rating - item_bias))
-
-
-        # # compute the score 
-        # scores = new_user_embdding@self.items_latents + 0.05*self.items_biases.reshape(1,-1)
-
-        # scores = np.dot(new_user_embdding, item_vector) +0.05* item_bias
-
-
-        # movies_may_be_recommended_indexes = np.argpartition(scores, -5)[-5:]
-
-      
-        # movies_to_recommend_ids = []
-        # for index in movies_may_be_recommended_indexes:
-        #     movies_to_recommend_ids.append(self.map_idx_to_movie[index])
-        
-        # movies_names = []
-        # for movie_id in movies_to_recommend_ids:
-        #     movies_names.append(self.get_movie_title_by_id(movies_dir, movie_id))
-            
-        # print(f"You may also like:{movies_names}")
-
-
-
-    # def train_test_split(self):
-
-    #     self.map_user_to_idx = {}
-    #     self.map_idx_to_user = []
-    #     self.data_by_user_train = []
-    #     self.data_by_user_test = []
-
-    #     self.map_movie_to_idx = {}
-    #     self.map_idx_to_movie = []
-    #     self.data_by_movie_train = []
-    #     self.data_by_movie_test = []
-
-
-    #     with open(self.data_dir, "r") as file:
-    #         csv_reader = csv.DictReader(file)
-    #         for row in csv_reader:
-    #             user_id = int(row["userId"])
-    #             movie_id = int(row["movieId"])
-    #             rating = float(row["rating"])
-    #             # assign randomly to train or test 
-    #             flip_coin = random.random()
-    #             if flip_coin < 0.5:
-    #                 if user_id not in self.map_idx_to_user:
-    #                     self.map_idx_to_user.append(user_id)
-    #                     self.map_user_to_idx[user_id] = self.map_idx_to_user.index(user_id)
-    #                     self.data_by_user_train.append([(movie_id, rating)])
-    #                     self.data_by_user_test.append([()])
-    #                 else:
-    #                     self.data_by_user_train[self.map_idx_to_user.index(user_id)].append((movie_id, rating))
-    #                     self.data_by_user_test[self.map_idx_to_user.index(user_id)].append(())
-
-    #                 if movie_id not in self.map_idx_to_movie:
-    #                     self.map_idx_to_movie .append(movie_id)
-    #                     self.map_movie_to_idx[movie_id] = self.map_idx_to_movie.index(movie_id)
-    #                     self.data_by_movie_train.append([(user_id, rating)])
-    #                     self.data_by_movie_test.append([()])
-    #                 else:
-    #                     self.data_by_movie_train[self.map_idx_to_movie.index(movie_id)].append((user_id, rating))
-    #                     self.data_by_movie_test[self.map_idx_to_movie.index(movie_id)].append(())
-
-    #             if user_id not in self.map_idx_to_user:
-    #                 self.map_idx_to_user.append(user_id)
-    #                 self.map_user_to_idx[user_id] = self.map_idx_to_user.index(user_id)
-    #                 self.data_by_user_test.append([(movie_id, rating)])
-    #                 self.data_by_user_train.append([()])
-    #             else:
-    #                 self.data_by_user_test[self.map_idx_to_user.index(user_id)].append((movie_id, rating))
-    #                 self.data_by_user_train[self.map_idx_to_user.index(user_id)].append(())
-
-    #             if movie_id not in self.map_idx_to_movie:
-    #                 self.map_idx_to_movie .append(movie_id)
-    #                 self.map_movie_to_idx[movie_id] = self.map_idx_to_movie.index(movie_id)
-    #                 self.data_by_movie_test.append([(user_id, rating)])
-    #                 self.data_by_movie_train.append([()])
-    #             else:
-    #                 self.data_by_movie_test[self.map_idx_to_movie.index(movie_id)].append((user_id, rating))
-    #                 self.data_by_movie_train[self.map_idx_to_movie.index(movie_id)].append(())
-        
-    #     self.data_by_user_train = [ list(filter(lambda x: len(x) > 0, list_tuples))  for list_tuples in self.data_by_user_train]
-    #     self.data_by_movie_train = [ list(filter(lambda x: len(x) > 0, list_tuples))  for list_tuples in self.data_by_movie_train]
-    #     self.data_by_user_test = [ list(filter(lambda x: len(x) > 0, list_tuples))  for list_tuples in self.data_by_user_test]
-    #     self.data_by_movie_test = [ list(filter(lambda x: len(x) > 0, list_tuples))  for list_tuples in self.data_by_movie_test]
-    # # mport csv
 
     def train_test_split(self):
         self.map_user_to_idx = {}
