@@ -84,6 +84,15 @@ class AlternatingLeastSquare:
             average_rating_per_movie.append(rating_sum/len(movie))
         return average_rating_per_movie
 
+    def sum_rating_per_movie(self):
+        sum_rating_per_movie = []
+        for movie in self.data_by_movie_id:
+            rating_sum = 0
+            for rating in movie:
+                rating_sum+=rating[1]
+            sum_rating_per_movie.append(rating_sum)
+        return sum_rating_per_movie
+
     def plot_power_law(self, fig_name):
         number_of_movies_per_user = [len(user_movies) for user_movies in self.data_by_user_id]
         number_of_users_per_movie = [len(movie_users) for movie_users in self.data_by_movie_id]

@@ -115,12 +115,12 @@ model_object = AlternatingLeastSquare("../data/ml-25m/ratings.csv", 10)
 
 
 def get_trendy_movies_names_posters():
-    with open("data/average_ratings", "r") as fp:
-        average_rating_per_movie= json.load(fp)
+    with open("data/sum_rating_per_movie", "r") as fp:
+        sum_rating_per_movie= json.load(fp)
 
     links_data = pd.read_csv("../data/ml-25m/links.csv")
     
-    trendy_movies_index = np.argsort(np.array(average_rating_per_movie))[-20:][::-1]
+    trendy_movies_index = np.argsort(np.array(sum_rating_per_movie))[-20:][::-1]
     movies_names = []
     movies_posters = []
     for index in trendy_movies_index:
