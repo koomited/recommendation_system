@@ -23,20 +23,24 @@ the large(ml-25m) contains $25000095$ ratings across 62423 movies (Available at 
 ## Tasks Performed
 
 1. **Implemente a personnalized data structure:**
+
    The movies ratings and user are written in array and dictionnaries format to allow for quick search and model fitting optimization.
    This is really important to dela with 25 millions observations.
 
-2. **Power law and ratings distributions**
+3. **Power law and ratings distributions**
 
-3. **First Model: Biases only**
+4. **First Model: Biases only**
+   
   Here we work on the assumptions that only the users and items biases explain the ratings distribution.
 
-4. **Second model: Biases + embeddings**
+6. **Second model: Biases + embeddings**
+   
    We add the users and items embeddings to the biases.
 
-5. **PLot movies embeddings**
+8. **PLot movies embeddings**
   
-6. **Deployment: Streamlit**
+9. **Deployment: Streamlit**
+    
    - Streamlit app : https://movielens-recommender-system.streamlit.app/
 
 
