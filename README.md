@@ -31,7 +31,7 @@ the large(ml-25m) contains $25000095$ ratings across 62423 movies (Available at 
 
 4. **First Model: Biases only**
    
-  Here we work on the assumptions that only the users and items biases explain the ratings distribution.
+   Here we work on the assumptions that only the users and items biases explain the ratings distribution.
 
 6. **Second model: Biases + embeddings**
    
